@@ -1,14 +1,15 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "./pages/Login";
-import Registro from "./pages/Registro";
-import Dashboard from "./pages/Dashboard";
-import Eventos from "./pages/Eventos";
-import Usuarios from "./pages/Usuarios";
+import Login from "./pages/Login/Login";
+import Registro from "./pages/Login/Registro";
+import ResetPassword from "./pages/Login/ResetPassword";
+import AuthCallback from "./pages/AuthCallback";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import Eventos from "./pages/Eventos/Eventos";
+import Usuarios from "./pages/Usuarios/Usuarios";
 import Reportes from "./pages/Reportes";
-import Edificios from "./pages/Edificios";  // ✅ Agregar'
-import Divisiones from "./pages/Divisiones"; 
+import Edificios from "./pages/Edificios";
+import Divisiones from "./pages/Dashboard/Divisiones";
 import ProtectedRoute from "./ProtectedRoute";
-
 
 function App() {
   return (
@@ -17,58 +18,59 @@ function App() {
         {/* Rutas públicas */}
         <Route path="/" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
-        
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+
         {/* Rutas protegidas */}
-        <Route 
-          path="/dashboard" 
+        <Route
+          path="/dashboard"
           element={
             <ProtectedRoute>
               <Dashboard />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/eventos" 
+        <Route
+          path="/eventos"
           element={
             <ProtectedRoute>
               <Eventos />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/usuarios" 
+        <Route
+          path="/usuarios"
           element={
             <ProtectedRoute>
               <Usuarios />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/reportes" 
+        <Route
+          path="/reportes"
           element={
             <ProtectedRoute>
               <Reportes />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/edificios" 
+        <Route
+          path="/edificios"
           element={
             <ProtectedRoute>
               <Edificios />
             </ProtectedRoute>
-          } 
+          }
         />
-        <Route 
-          path="/divisiones" 
+        <Route
+          path="/divisiones"
           element={
             <ProtectedRoute>
               <Divisiones />
             </ProtectedRoute>
-          } 
+          }
         />
       </Routes>
-      
     </BrowserRouter>
   );
 }

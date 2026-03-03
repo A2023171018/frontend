@@ -1,68 +1,77 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
-  getEdificios,
-  createEdificio,
-  updateEdificio,
-  deleteEdificio,
-} from "../services/edificios";
-import { getDivisiones } from "../services/divisiones";
-import "./Usuarios/Usuarios.css"; // reutiliza el mismo CSS
+  getEventos,
+  createEvento,
+  updateEvento,
+  deleteEvento,
+  toggleStatusEvento,
+  getProfesores,
+} from "../../services/eventos";
+import { getEdificios } from "../../services/edificios";
+import { getUsuarios } from "../../services/usuarios";
+import "./Eventos.css";
+
+interface Evento {
+  id_event: number;
+  name_event: string;
+  id_building: number;
+  timedate_event: string;
+  status_event: number;
+  id_profe: number;
+  id_user: number;
+}
 
 interface Edificio {
   id_building: number;
   name_building: string;
-  descrip_building?: string;
-  code_building?: string;
-  imagen_url?: string;
-  lat_building: number;
-  lon_building: number;
-  id_div?: number;
-  name_div?: string;
 }
 
-interface Division {
-  id_div: number;
-  name_div: string;
+interface Profesor {
+  id_profe: number;
+  nombre_profe: string;
 }
 
-function Edificios() {
+interface Usuario {
+  id_user: number;
+  name_user: string;
+}
+
+function Eventos() {
   const navigate = useNavigate();
   const [showLogoutMenu, setShowLogoutMenu] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [edificiosData, setEdificiosData] = useState<Edificio[]>([]);
-  const [divisiones, setDivisiones] = useState<Division[]>([]);
+  const [eventosData, setEventosData] = useState<Evento[]>([]);
+  const [edificios, setEdificios] = useState<Edificio[]>([]);
+  const [profesores, setProfesores] = useState<Profesor[]>([]);
+  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({
-    name_building: "",
-    descrip_building: "",
-    code_building: "",
-    imagen_url: "",
-    lat_building: "",
-    lon_building: "",
-    id_div: "",
+    name_event: "",
+    id_building: "",
+    timedate_event: "",
+    id_profe: "",
+    id_user: "",
   });
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
-    id_building: 0,
-    name_building: "",
-    descrip_building: "",
-    code_building: "",
-    imagen_url: "",
-    lat_building: "",
-    lon_building: "",
-    id_div: "",
+    id_event: 0,
+    name_event: "",
+    id_building: "",
+    timedate_event: "",
+    id_profe: "",
+    id_user: "",
   });
 
   const [modalError, setModalError] = useState("");
 
-  const fetchEdificios = () => {
-    getEdificios()
+  const fetchEventos = () => {
+    getEventos()
       .then((data) => {
-        setEdificiosData(data);
+        setEventosData(data);
         setLoading(false);
       })
       .catch((err) => {
@@ -71,15 +80,29 @@ function Edificios() {
       });
   };
 
-  const fetchDivisiones = () => {
-    getDivisiones()
-      .then((data) => setDivisiones(data))
+  const fetchEdificios = () => {
+    getEdificios()
+      .then((data) => setEdificios(data))
+      .catch((err) => console.error(err));
+  };
+
+  const fetchProfesores = () => {
+    getProfesores()
+      .then((data) => setProfesores(data))
+      .catch((err) => console.error(err));
+  };
+
+  const fetchUsuarios = () => {
+    getUsuarios()
+      .then((data) => setUsuarios(data))
       .catch((err) => console.error(err));
   };
 
   useEffect(() => {
+    fetchEventos();
     fetchEdificios();
-    fetchDivisiones();
+    fetchProfesores();
+    fetchUsuarios();
   }, []);
 
   const handleLogout = () => {
@@ -89,34 +112,39 @@ function Edificios() {
     navigate("/", { replace: true });
   };
 
-  const filteredEdificios = edificiosData.filter(
-    (e) =>
-      e.name_building.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (e.code_building ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredEventos = eventosData.filter((e) =>
+    e.name_event.toLowerCase().includes(searchTerm.toLowerCase()),
   );
+
+  const getNombreEdificio = (id: number) =>
+    edificios.find((e) => e.id_building === id)?.name_building ??
+    `Edificio ${id}`;
+
+  const getNombreProfesor = (id: number) =>
+    profesores.find((p) => p.id_profe === id)?.nombre_profe ?? `Profesor ${id}`;
+
+  const getNombreUsuario = (id: number) =>
+    usuarios.find((u) => u.id_user === id)?.name_user ?? `Usuario ${id}`;
 
   const handleAddSubmit = async () => {
     setModalError("");
     try {
-      await createEdificio({
-        name_building: addForm.name_building,
-        code_building: addForm.code_building || undefined,
-        imagen_url: addForm.imagen_url || undefined,
-        lat_building: parseFloat(addForm.lat_building),
-        lon_building: parseFloat(addForm.lon_building),
-        id_div: addForm.id_div ? parseInt(addForm.id_div) : undefined,
+      await createEvento({
+        name_event: addForm.name_event,
+        id_building: parseInt(addForm.id_building),
+        timedate_event: addForm.timedate_event,
+        id_profe: parseInt(addForm.id_profe),
+        id_user: parseInt(addForm.id_user),
       });
       setShowAddModal(false);
       setAddForm({
-        name_building: "",
-        descrip_building: "",
-        code_building: "",
-        imagen_url: "",
-        lat_building: "",
-        lon_building: "",
-        id_div: "",
+        name_event: "",
+        id_building: "",
+        timedate_event: "",
+        id_profe: "",
+        id_user: "",
       });
-      fetchEdificios();
+      fetchEventos();
     } catch (error) {
       if (error instanceof Error) {
         setModalError(error.message);
@@ -126,17 +154,15 @@ function Edificios() {
     }
   };
 
-  const openEditModal = (e: Edificio) => {
+  const openEditModal = (evento: Evento) => {
     setModalError("");
     setEditForm({
-      id_building: e.id_building,
-      name_building: e.name_building,
-      descrip_building: e.descrip_building ?? "",
-      code_building: e.code_building ?? "",
-      imagen_url: e.imagen_url ?? "",
-      lat_building: String(e.lat_building),
-      lon_building: String(e.lon_building),
-      id_div: e.id_div ? String(e.id_div) : "",
+      id_event: evento.id_event,
+      name_event: evento.name_event,
+      id_building: String(evento.id_building),
+      timedate_event: evento.timedate_event.replace(" ", "T").substring(0, 16),
+      id_profe: String(evento.id_profe),
+      id_user: String(evento.id_user),
     });
     setShowEditModal(true);
   };
@@ -144,16 +170,15 @@ function Edificios() {
   const handleEditSubmit = async () => {
     setModalError("");
     try {
-      await updateEdificio(editForm.id_building, {
-        name_building: editForm.name_building,
-        code_building: editForm.code_building || undefined,
-        imagen_url: editForm.imagen_url || undefined,
-        lat_building: parseFloat(editForm.lat_building),
-        lon_building: parseFloat(editForm.lon_building),
-        id_div: editForm.id_div ? parseInt(editForm.id_div) : undefined,
+      await updateEvento(editForm.id_event, {
+        name_event: editForm.name_event,
+        id_building: parseInt(editForm.id_building),
+        timedate_event: editForm.timedate_event,
+        id_profe: parseInt(editForm.id_profe),
+        id_user: parseInt(editForm.id_user),
       });
       setShowEditModal(false);
-      fetchEdificios();
+      fetchEventos();
     } catch (error) {
       if (error instanceof Error) {
         setModalError(error.message);
@@ -163,13 +188,22 @@ function Edificios() {
     }
   };
 
-  const handleDelete = async (id_building: number, name: string) => {
-    if (!window.confirm(`¿Eliminar el edificio "${name}"?`)) return;
+  const handleDelete = async (id_event: number, name_event: string) => {
+    if (!window.confirm(`¿Eliminar el evento "${name_event}"?`)) return;
     try {
-      await deleteEdificio(id_building);
-      fetchEdificios();
+      await deleteEvento(id_event);
+      fetchEventos();
     } catch {
-      alert("Error al eliminar el edificio");
+      alert("Error al eliminar el evento");
+    }
+  };
+
+  const handleToggleStatus = async (evento: Evento) => {
+    try {
+      await toggleStatusEvento(evento.id_event);
+      fetchEventos();
+    } catch {
+      console.error("Error cambiando estado");
     }
   };
 
@@ -194,8 +228,6 @@ function Edificios() {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-    maxHeight: "90vh",
-    overflowY: "auto",
   };
 
   const inputStyle: React.CSSProperties = {
@@ -209,15 +241,8 @@ function Edificios() {
 
   const selectStyle: React.CSSProperties = { ...inputStyle };
 
-  const labelStyle: React.CSSProperties = {
-    fontSize: "12px",
-    fontWeight: 600,
-    color: "#6b7280",
-    marginBottom: "-8px",
-  };
-
   return (
-    <div className="usuarios-container">
+    <div className="eventos-container">
       <aside className="sidebar">
         <nav className="sidebar-nav">
           <button className="nav-item" onClick={() => navigate("/dashboard")}>
@@ -258,7 +283,10 @@ function Edificios() {
             <span className="nav-text">Usuarios</span>
           </button>
 
-          <button className="nav-item" onClick={() => navigate("/eventos")}>
+          <button
+            className="nav-item active"
+            onClick={() => navigate("/eventos")}
+          >
             <span className="nav-icon">
               <svg
                 width="18"
@@ -277,10 +305,7 @@ function Edificios() {
             <span className="nav-text">Eventos</span>
           </button>
 
-          <button
-            className="nav-item active"
-            onClick={() => navigate("/edificios")}
-          >
+          <button className="nav-item" onClick={() => navigate("/edificios")}>
             <span className="nav-icon">
               <svg
                 width="18"
@@ -363,13 +388,13 @@ function Edificios() {
         <div className="top-nav">
           <span className="top-nav-text inactive">Dashboards</span>
           <span className="top-nav-separator">/</span>
-          <span className="top-nav-text active">Edificios</span>
+          <span className="top-nav-text active">Eventos</span>
         </div>
 
         <div className="content-card">
           <div className="content-header">
             <div className="header-left">
-              <h2 className="content-title">Edificios</h2>
+              <h2 className="content-title">Eventos</h2>
               <button
                 className="btn-primary"
                 onClick={() => {
@@ -395,7 +420,7 @@ function Edificios() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o código"
+                  placeholder="Buscar evento por nombre"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="search-input"
@@ -407,56 +432,41 @@ function Edificios() {
           <div className="table-container">
             {loading ? (
               <p style={{ padding: "20px", textAlign: "center" }}>
-                Cargando edificios...
+                Cargando eventos...
               </p>
             ) : (
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Nombre</th>
-                    <th>Código</th>
-                    <th>Descripción</th>
-                    <th>División</th>
-                    <th>Latitud</th>
-                    <th>Longitud</th>
-                    <th>Imagen</th>
+                    <th>Edificio</th>
+                    <th>Fecha y Hora</th>
+                    <th>Profesor</th>
+                    <th>Usuario</th>
+                    <th>Status</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEdificios.map((ed) => (
-                    <tr key={ed.id_building}>
-                      <td className="cell-name">{ed.name_building}</td>
-                      <td>{ed.code_building ?? "—"}</td>
-                      <td>{ed.descrip_building ?? "—"}</td>
-                      <td>{ed.name_div ?? "—"}</td>
-                      <td>{ed.lat_building}</td>
-                      <td>{ed.lon_building}</td>
+                  {filteredEventos.map((evento) => (
+                    <tr key={evento.id_event}>
+                      <td className="cell-name">{evento.name_event}</td>
+                      <td>{getNombreEdificio(evento.id_building)}</td>
+                      <td>{evento.timedate_event}</td>
+                      <td>{getNombreProfesor(evento.id_profe)}</td>
+                      <td>{getNombreUsuario(evento.id_user)}</td>
                       <td>
-                        {ed.imagen_url ? (
-                          <img
-                            src={ed.imagen_url}
-                            alt={ed.name_building}
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              objectFit: "cover",
-                              borderRadius: "6px",
-                            }}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display =
-                                "none";
-                            }}
-                          />
-                        ) : (
-                          "—"
-                        )}
+                        <span
+                          className={`status-badge ${evento.status_event === 0 ? "status-inactive" : "status-active"}`}
+                        >
+                          {evento.status_event === 0 ? "Inactivo" : "Activo"}
+                        </span>
                       </td>
                       <td className="cell-actions">
                         <button
                           className="action-btn"
                           title="Editar"
-                          onClick={() => openEditModal(ed)}
+                          onClick={() => openEditModal(evento)}
                         >
                           <svg
                             width="16"
@@ -471,11 +481,39 @@ function Edificios() {
                           </svg>
                         </button>
                         <button
+                          className={`action-btn ${evento.status_event === 0 ? "action-btn-disabled" : ""}`}
+                          title="Toggle Status"
+                          onClick={() => handleToggleStatus(evento)}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <rect
+                              x="1"
+                              y="5"
+                              width="22"
+                              height="14"
+                              rx="7"
+                              ry="7"
+                            />
+                            <circle
+                              cx={evento.status_event === 0 ? "8" : "16"}
+                              cy="12"
+                              r="3"
+                            />
+                          </svg>
+                        </button>
+                        <button
                           className="action-btn"
                           title="Eliminar"
                           style={{ color: "#dc2626" }}
                           onClick={() =>
-                            handleDelete(ed.id_building, ed.name_building)
+                            handleDelete(evento.id_event, evento.name_event)
                           }
                         >
                           <svg
@@ -511,7 +549,8 @@ function Edificios() {
       {showAddModal && (
         <div style={modalStyle} onClick={() => setShowAddModal(false)}>
           <div style={cardStyle} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: "18px" }}>Agregar Edificio</h3>
+            <h3 style={{ margin: 0, fontSize: "18px" }}>Agregar Evento</h3>
+
             {modalError && (
               <div
                 style={{
@@ -525,75 +564,69 @@ function Edificios() {
                 {modalError}
               </div>
             )}
-            <span style={labelStyle}>Nombre</span>
+
             <input
               style={inputStyle}
-              placeholder="Nombre del edificio"
-              value={addForm.name_building}
+              placeholder="Nombre del evento"
+              value={addForm.name_event}
               onChange={(e) =>
-                setAddForm((p) => ({ ...p, name_building: e.target.value }))
+                setAddForm((p) => ({ ...p, name_event: e.target.value }))
               }
             />
 
-            <span style={labelStyle}>Código</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: ED-01"
-              value={addForm.code_building}
-              onChange={(e) =>
-                setAddForm((p) => ({ ...p, code_building: e.target.value }))
-              }
-            />
-
-            <span style={labelStyle}>División</span>
             <select
               style={selectStyle}
-              value={addForm.id_div}
+              value={addForm.id_building}
               onChange={(e) =>
-                setAddForm((p) => ({ ...p, id_div: e.target.value }))
+                setAddForm((p) => ({ ...p, id_building: e.target.value }))
               }
             >
-              <option value="">Seleccionar división</option>
-              {divisiones.map((d) => (
-                <option key={d.id_div} value={d.id_div}>
-                  {d.name_div}
+              <option value="">Seleccionar edificio</option>
+              {edificios.map((ed) => (
+                <option key={ed.id_building} value={ed.id_building}>
+                  {ed.name_building}
                 </option>
               ))}
             </select>
 
-            <span style={labelStyle}>Latitud</span>
             <input
               style={inputStyle}
-              placeholder="Ej: 20.5888"
-              type="number"
-              step="any"
-              value={addForm.lat_building}
+              type="datetime-local"
+              value={addForm.timedate_event}
               onChange={(e) =>
-                setAddForm((p) => ({ ...p, lat_building: e.target.value }))
+                setAddForm((p) => ({ ...p, timedate_event: e.target.value }))
               }
             />
 
-            <span style={labelStyle}>Longitud</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: -100.3899"
-              type="number"
-              step="any"
-              value={addForm.lon_building}
+            <select
+              style={selectStyle}
+              value={addForm.id_profe}
               onChange={(e) =>
-                setAddForm((p) => ({ ...p, lon_building: e.target.value }))
+                setAddForm((p) => ({ ...p, id_profe: e.target.value }))
               }
-            />
+            >
+              <option value="">Seleccionar profesor</option>
+              {profesores.map((pr) => (
+                <option key={pr.id_profe} value={pr.id_profe}>
+                  {pr.nombre_profe}
+                </option>
+              ))}
+            </select>
 
-            <span style={labelStyle}>URL de imagen</span>
-            <input
-              style={inputStyle}
-              placeholder="https://..."
-              value={addForm.imagen_url}
+            <select
+              style={selectStyle}
+              value={addForm.id_user}
               onChange={(e) =>
-                setAddForm((p) => ({ ...p, imagen_url: e.target.value }))
+                setAddForm((p) => ({ ...p, id_user: e.target.value }))
               }
-            />
+            >
+              <option value="">Seleccionar usuario</option>
+              {usuarios.map((u) => (
+                <option key={u.id_user} value={u.id_user}>
+                  {u.name_user}
+                </option>
+              ))}
+            </select>
 
             <div
               style={{
@@ -620,7 +653,8 @@ function Edificios() {
       {showEditModal && (
         <div style={modalStyle} onClick={() => setShowEditModal(false)}>
           <div style={cardStyle} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: "18px" }}>Editar Edificio</h3>
+            <h3 style={{ margin: 0, fontSize: "18px" }}>Editar Evento</h3>
+
             {modalError && (
               <div
                 style={{
@@ -634,75 +668,69 @@ function Edificios() {
                 {modalError}
               </div>
             )}
-            <span style={labelStyle}>Nombre</span>
+
             <input
               style={inputStyle}
-              placeholder="Nombre del edificio"
-              value={editForm.name_building}
+              placeholder="Nombre del evento"
+              value={editForm.name_event}
               onChange={(e) =>
-                setEditForm((p) => ({ ...p, name_building: e.target.value }))
+                setEditForm((p) => ({ ...p, name_event: e.target.value }))
               }
             />
 
-            <span style={labelStyle}>Código</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: ED-01"
-              value={editForm.code_building}
-              onChange={(e) =>
-                setEditForm((p) => ({ ...p, code_building: e.target.value }))
-              }
-            />
-
-            <span style={labelStyle}>División</span>
             <select
               style={selectStyle}
-              value={editForm.id_div}
+              value={editForm.id_building}
               onChange={(e) =>
-                setEditForm((p) => ({ ...p, id_div: e.target.value }))
+                setEditForm((p) => ({ ...p, id_building: e.target.value }))
               }
             >
-              <option value="">Seleccionar división</option>
-              {divisiones.map((d) => (
-                <option key={d.id_div} value={d.id_div}>
-                  {d.name_div}
+              <option value="">Seleccionar edificio</option>
+              {edificios.map((ed) => (
+                <option key={ed.id_building} value={ed.id_building}>
+                  {ed.name_building}
                 </option>
               ))}
             </select>
 
-            <span style={labelStyle}>Latitud</span>
             <input
               style={inputStyle}
-              placeholder="Ej: 20.5888"
-              type="number"
-              step="any"
-              value={editForm.lat_building}
+              type="datetime-local"
+              value={editForm.timedate_event}
               onChange={(e) =>
-                setEditForm((p) => ({ ...p, lat_building: e.target.value }))
+                setEditForm((p) => ({ ...p, timedate_event: e.target.value }))
               }
             />
 
-            <span style={labelStyle}>Longitud</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: -100.3899"
-              type="number"
-              step="any"
-              value={editForm.lon_building}
+            <select
+              style={selectStyle}
+              value={editForm.id_profe}
               onChange={(e) =>
-                setEditForm((p) => ({ ...p, lon_building: e.target.value }))
+                setEditForm((p) => ({ ...p, id_profe: e.target.value }))
               }
-            />
+            >
+              <option value="">Seleccionar profesor</option>
+              {profesores.map((pr) => (
+                <option key={pr.id_profe} value={pr.id_profe}>
+                  {pr.nombre_profe}
+                </option>
+              ))}
+            </select>
 
-            <span style={labelStyle}>URL de imagen</span>
-            <input
-              style={inputStyle}
-              placeholder="https://..."
-              value={editForm.imagen_url}
+            <select
+              style={selectStyle}
+              value={editForm.id_user}
               onChange={(e) =>
-                setEditForm((p) => ({ ...p, imagen_url: e.target.value }))
+                setEditForm((p) => ({ ...p, id_user: e.target.value }))
               }
-            />
+            >
+              <option value="">Seleccionar usuario</option>
+              {usuarios.map((u) => (
+                <option key={u.id_user} value={u.id_user}>
+                  {u.name_user}
+                </option>
+              ))}
+            </select>
 
             <div
               style={{
@@ -728,4 +756,4 @@ function Edificios() {
   );
 }
 
-export default Edificios;
+export default Eventos;

@@ -1,68 +1,39 @@
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import {
-  getEdificios,
-  createEdificio,
-  updateEdificio,
-  deleteEdificio,
-} from "../services/edificios";
-import { getDivisiones } from "../services/divisiones";
-import "./Usuarios/Usuarios.css"; // reutiliza el mismo CSS
-
-interface Edificio {
-  id_building: number;
-  name_building: string;
-  descrip_building?: string;
-  code_building?: string;
-  imagen_url?: string;
-  lat_building: number;
-  lon_building: number;
-  id_div?: number;
-  name_div?: string;
-}
+  getDivisionesAll,
+  createDivision,
+  updateDivision,
+  deleteDivision,
+} from "../../services/divisiones";
+import "../Usuarios/Usuarios.css";
 
 interface Division {
   id_div: number;
   name_div: string;
+  total_profesores?: number;
+  total_edificios?: number;
 }
 
-function Edificios() {
+function Divisiones() {
   const navigate = useNavigate();
   const [showLogoutMenu, setShowLogoutMenu] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [edificiosData, setEdificiosData] = useState<Edificio[]>([]);
-  const [divisiones, setDivisiones] = useState<Division[]>([]);
+  const [divisionesData, setDivisionesData] = useState<Division[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showAddModal, setShowAddModal] = useState(false);
-  const [addForm, setAddForm] = useState({
-    name_building: "",
-    descrip_building: "",
-    code_building: "",
-    imagen_url: "",
-    lat_building: "",
-    lon_building: "",
-    id_div: "",
-  });
+  const [addForm, setAddForm] = useState({ name_div: "" });
 
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState({
-    id_building: 0,
-    name_building: "",
-    descrip_building: "",
-    code_building: "",
-    imagen_url: "",
-    lat_building: "",
-    lon_building: "",
-    id_div: "",
-  });
+  const [editForm, setEditForm] = useState({ id_div: 0, name_div: "" });
 
   const [modalError, setModalError] = useState("");
 
-  const fetchEdificios = () => {
-    getEdificios()
+  const fetchDivisiones = () => {
+    getDivisionesAll()
       .then((data) => {
-        setEdificiosData(data);
+        setDivisionesData(data);
         setLoading(false);
       })
       .catch((err) => {
@@ -71,14 +42,7 @@ function Edificios() {
       });
   };
 
-  const fetchDivisiones = () => {
-    getDivisiones()
-      .then((data) => setDivisiones(data))
-      .catch((err) => console.error(err));
-  };
-
   useEffect(() => {
-    fetchEdificios();
     fetchDivisiones();
   }, []);
 
@@ -89,34 +53,21 @@ function Edificios() {
     navigate("/", { replace: true });
   };
 
-  const filteredEdificios = edificiosData.filter(
-    (e) =>
-      e.name_building.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (e.code_building ?? "").toLowerCase().includes(searchTerm.toLowerCase()),
+  const filteredDivisiones = divisionesData.filter((d) =>
+    d.name_div.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleAddSubmit = async () => {
     setModalError("");
+    if (!addForm.name_div.trim()) {
+      setModalError("El nombre es obligatorio");
+      return;
+    }
     try {
-      await createEdificio({
-        name_building: addForm.name_building,
-        code_building: addForm.code_building || undefined,
-        imagen_url: addForm.imagen_url || undefined,
-        lat_building: parseFloat(addForm.lat_building),
-        lon_building: parseFloat(addForm.lon_building),
-        id_div: addForm.id_div ? parseInt(addForm.id_div) : undefined,
-      });
+      await createDivision({ name_div: addForm.name_div });
       setShowAddModal(false);
-      setAddForm({
-        name_building: "",
-        descrip_building: "",
-        code_building: "",
-        imagen_url: "",
-        lat_building: "",
-        lon_building: "",
-        id_div: "",
-      });
-      fetchEdificios();
+      setAddForm({ name_div: "" });
+      fetchDivisiones();
     } catch (error) {
       if (error instanceof Error) {
         setModalError(error.message);
@@ -126,34 +77,22 @@ function Edificios() {
     }
   };
 
-  const openEditModal = (e: Edificio) => {
+  const openEditModal = (d: Division) => {
     setModalError("");
-    setEditForm({
-      id_building: e.id_building,
-      name_building: e.name_building,
-      descrip_building: e.descrip_building ?? "",
-      code_building: e.code_building ?? "",
-      imagen_url: e.imagen_url ?? "",
-      lat_building: String(e.lat_building),
-      lon_building: String(e.lon_building),
-      id_div: e.id_div ? String(e.id_div) : "",
-    });
+    setEditForm({ id_div: d.id_div, name_div: d.name_div });
     setShowEditModal(true);
   };
 
   const handleEditSubmit = async () => {
     setModalError("");
+    if (!editForm.name_div.trim()) {
+      setModalError("El nombre es obligatorio");
+      return;
+    }
     try {
-      await updateEdificio(editForm.id_building, {
-        name_building: editForm.name_building,
-        code_building: editForm.code_building || undefined,
-        imagen_url: editForm.imagen_url || undefined,
-        lat_building: parseFloat(editForm.lat_building),
-        lon_building: parseFloat(editForm.lon_building),
-        id_div: editForm.id_div ? parseInt(editForm.id_div) : undefined,
-      });
+      await updateDivision(editForm.id_div, { name_div: editForm.name_div });
       setShowEditModal(false);
-      fetchEdificios();
+      fetchDivisiones();
     } catch (error) {
       if (error instanceof Error) {
         setModalError(error.message);
@@ -163,13 +102,17 @@ function Edificios() {
     }
   };
 
-  const handleDelete = async (id_building: number, name: string) => {
-    if (!window.confirm(`¿Eliminar el edificio "${name}"?`)) return;
+  const handleDelete = async (id_div: number, name: string) => {
+    if (!window.confirm(`¿Eliminar la división "${name}"?`)) return;
     try {
-      await deleteEdificio(id_building);
-      fetchEdificios();
-    } catch {
-      alert("Error al eliminar el edificio");
+      await deleteDivision(id_div);
+      fetchDivisiones();
+    } catch (error) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("No se pudo conectar con el servidor");
+      }
     }
   };
 
@@ -194,8 +137,6 @@ function Edificios() {
     display: "flex",
     flexDirection: "column",
     gap: "16px",
-    maxHeight: "90vh",
-    overflowY: "auto",
   };
 
   const inputStyle: React.CSSProperties = {
@@ -206,8 +147,6 @@ function Edificios() {
     fontSize: "14px",
     boxSizing: "border-box",
   };
-
-  const selectStyle: React.CSSProperties = { ...inputStyle };
 
   const labelStyle: React.CSSProperties = {
     fontSize: "12px",
@@ -277,10 +216,7 @@ function Edificios() {
             <span className="nav-text">Eventos</span>
           </button>
 
-          <button
-            className="nav-item active"
-            onClick={() => navigate("/edificios")}
-          >
+          <button className="nav-item" onClick={() => navigate("/edificios")}>
             <span className="nav-icon">
               <svg
                 width="18"
@@ -297,7 +233,11 @@ function Edificios() {
             </span>
             <span className="nav-text">Edificios</span>
           </button>
-          <button className="nav-item" onClick={() => navigate("/divisiones")}>
+
+          <button
+            className="nav-item active"
+            onClick={() => navigate("/divisiones")}
+          >
             <span className="nav-icon">
               <svg
                 width="18"
@@ -363,13 +303,13 @@ function Edificios() {
         <div className="top-nav">
           <span className="top-nav-text inactive">Dashboards</span>
           <span className="top-nav-separator">/</span>
-          <span className="top-nav-text active">Edificios</span>
+          <span className="top-nav-text active">Divisiones</span>
         </div>
 
         <div className="content-card">
           <div className="content-header">
             <div className="header-left">
-              <h2 className="content-title">Edificios</h2>
+              <h2 className="content-title">Divisiones</h2>
               <button
                 className="btn-primary"
                 onClick={() => {
@@ -395,7 +335,7 @@ function Edificios() {
                 </svg>
                 <input
                   type="text"
-                  placeholder="Buscar por nombre o código"
+                  placeholder="Buscar por nombre"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="search-input"
@@ -407,56 +347,29 @@ function Edificios() {
           <div className="table-container">
             {loading ? (
               <p style={{ padding: "20px", textAlign: "center" }}>
-                Cargando edificios...
+                Cargando divisiones...
               </p>
             ) : (
               <table className="data-table">
                 <thead>
                   <tr>
                     <th>Nombre</th>
-                    <th>Código</th>
-                    <th>Descripción</th>
-                    <th>División</th>
-                    <th>Latitud</th>
-                    <th>Longitud</th>
-                    <th>Imagen</th>
+                    <th>Profesores</th>
+                    <th>Edificios</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEdificios.map((ed) => (
-                    <tr key={ed.id_building}>
-                      <td className="cell-name">{ed.name_building}</td>
-                      <td>{ed.code_building ?? "—"}</td>
-                      <td>{ed.descrip_building ?? "—"}</td>
-                      <td>{ed.name_div ?? "—"}</td>
-                      <td>{ed.lat_building}</td>
-                      <td>{ed.lon_building}</td>
-                      <td>
-                        {ed.imagen_url ? (
-                          <img
-                            src={ed.imagen_url}
-                            alt={ed.name_building}
-                            style={{
-                              width: "40px",
-                              height: "40px",
-                              objectFit: "cover",
-                              borderRadius: "6px",
-                            }}
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display =
-                                "none";
-                            }}
-                          />
-                        ) : (
-                          "—"
-                        )}
-                      </td>
+                  {filteredDivisiones.map((d) => (
+                    <tr key={d.id_div}>
+                      <td className="cell-name">{d.name_div}</td>
+                      <td>{d.total_profesores}</td>
+                      <td>{d.total_edificios}</td>
                       <td className="cell-actions">
                         <button
                           className="action-btn"
                           title="Editar"
-                          onClick={() => openEditModal(ed)}
+                          onClick={() => openEditModal(d)}
                         >
                           <svg
                             width="16"
@@ -474,9 +387,7 @@ function Edificios() {
                           className="action-btn"
                           title="Eliminar"
                           style={{ color: "#dc2626" }}
-                          onClick={() =>
-                            handleDelete(ed.id_building, ed.name_building)
-                          }
+                          onClick={() => handleDelete(d.id_div, d.name_div)}
                         >
                           <svg
                             width="16"
@@ -511,7 +422,7 @@ function Edificios() {
       {showAddModal && (
         <div style={modalStyle} onClick={() => setShowAddModal(false)}>
           <div style={cardStyle} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: "18px" }}>Agregar Edificio</h3>
+            <h3 style={{ margin: 0, fontSize: "18px" }}>Agregar División</h3>
             {modalError && (
               <div
                 style={{
@@ -528,73 +439,10 @@ function Edificios() {
             <span style={labelStyle}>Nombre</span>
             <input
               style={inputStyle}
-              placeholder="Nombre del edificio"
-              value={addForm.name_building}
-              onChange={(e) =>
-                setAddForm((p) => ({ ...p, name_building: e.target.value }))
-              }
+              placeholder="Nombre de la división"
+              value={addForm.name_div}
+              onChange={(e) => setAddForm({ name_div: e.target.value })}
             />
-
-            <span style={labelStyle}>Código</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: ED-01"
-              value={addForm.code_building}
-              onChange={(e) =>
-                setAddForm((p) => ({ ...p, code_building: e.target.value }))
-              }
-            />
-
-            <span style={labelStyle}>División</span>
-            <select
-              style={selectStyle}
-              value={addForm.id_div}
-              onChange={(e) =>
-                setAddForm((p) => ({ ...p, id_div: e.target.value }))
-              }
-            >
-              <option value="">Seleccionar división</option>
-              {divisiones.map((d) => (
-                <option key={d.id_div} value={d.id_div}>
-                  {d.name_div}
-                </option>
-              ))}
-            </select>
-
-            <span style={labelStyle}>Latitud</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: 20.5888"
-              type="number"
-              step="any"
-              value={addForm.lat_building}
-              onChange={(e) =>
-                setAddForm((p) => ({ ...p, lat_building: e.target.value }))
-              }
-            />
-
-            <span style={labelStyle}>Longitud</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: -100.3899"
-              type="number"
-              step="any"
-              value={addForm.lon_building}
-              onChange={(e) =>
-                setAddForm((p) => ({ ...p, lon_building: e.target.value }))
-              }
-            />
-
-            <span style={labelStyle}>URL de imagen</span>
-            <input
-              style={inputStyle}
-              placeholder="https://..."
-              value={addForm.imagen_url}
-              onChange={(e) =>
-                setAddForm((p) => ({ ...p, imagen_url: e.target.value }))
-              }
-            />
-
             <div
               style={{
                 display: "flex",
@@ -620,7 +468,7 @@ function Edificios() {
       {showEditModal && (
         <div style={modalStyle} onClick={() => setShowEditModal(false)}>
           <div style={cardStyle} onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ margin: 0, fontSize: "18px" }}>Editar Edificio</h3>
+            <h3 style={{ margin: 0, fontSize: "18px" }}>Editar División</h3>
             {modalError && (
               <div
                 style={{
@@ -637,73 +485,12 @@ function Edificios() {
             <span style={labelStyle}>Nombre</span>
             <input
               style={inputStyle}
-              placeholder="Nombre del edificio"
-              value={editForm.name_building}
+              placeholder="Nombre de la división"
+              value={editForm.name_div}
               onChange={(e) =>
-                setEditForm((p) => ({ ...p, name_building: e.target.value }))
+                setEditForm((p) => ({ ...p, name_div: e.target.value }))
               }
             />
-
-            <span style={labelStyle}>Código</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: ED-01"
-              value={editForm.code_building}
-              onChange={(e) =>
-                setEditForm((p) => ({ ...p, code_building: e.target.value }))
-              }
-            />
-
-            <span style={labelStyle}>División</span>
-            <select
-              style={selectStyle}
-              value={editForm.id_div}
-              onChange={(e) =>
-                setEditForm((p) => ({ ...p, id_div: e.target.value }))
-              }
-            >
-              <option value="">Seleccionar división</option>
-              {divisiones.map((d) => (
-                <option key={d.id_div} value={d.id_div}>
-                  {d.name_div}
-                </option>
-              ))}
-            </select>
-
-            <span style={labelStyle}>Latitud</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: 20.5888"
-              type="number"
-              step="any"
-              value={editForm.lat_building}
-              onChange={(e) =>
-                setEditForm((p) => ({ ...p, lat_building: e.target.value }))
-              }
-            />
-
-            <span style={labelStyle}>Longitud</span>
-            <input
-              style={inputStyle}
-              placeholder="Ej: -100.3899"
-              type="number"
-              step="any"
-              value={editForm.lon_building}
-              onChange={(e) =>
-                setEditForm((p) => ({ ...p, lon_building: e.target.value }))
-              }
-            />
-
-            <span style={labelStyle}>URL de imagen</span>
-            <input
-              style={inputStyle}
-              placeholder="https://..."
-              value={editForm.imagen_url}
-              onChange={(e) =>
-                setEditForm((p) => ({ ...p, imagen_url: e.target.value }))
-              }
-            />
-
             <div
               style={{
                 display: "flex",
@@ -728,4 +515,4 @@ function Edificios() {
   );
 }
 
-export default Edificios;
+export default Divisiones;

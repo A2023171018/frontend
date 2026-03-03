@@ -21,12 +21,12 @@ CREATE TABLE edificios (
     id_div INT REFERENCES divisiones(id_div)
 );
 
--- 4. Tabla de Usuarios
+-- 4. Tabla de Usuarios (Compatible con Supabase Auth)
 CREATE TABLE usuarios (
-    id_user SERIAL PRIMARY KEY,
+    id_user UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name_user VARCHAR(255) NOT NULL,
     email_user VARCHAR(255) NOT NULL UNIQUE,
-    pass_user VARCHAR(255) NOT NULL,
+    pass_user VARCHAR(255),  -- Opcional: NULL para usuarios OAuth
     matricula_user INT,
     id_rol INT REFERENCES rol(id_rol)
 );
@@ -48,7 +48,7 @@ CREATE TABLE eventos (
     timedate_event TIMESTAMP, -- En Postgres se usa TIMESTAMP
     status_event INT DEFAULT 1,
     id_profe INT REFERENCES profesor(id_profe),
-    id_user INT REFERENCES usuarios(id_user)
+    id_user UUID REFERENCES usuarios(id_user)
 );
 
 -- 7. Tabla de Horarios del Profesor
@@ -68,12 +68,11 @@ INSERT INTO rol (name_rol) VALUES
 ('Usuario'),
 ('Profesor');
 
--- Insertar un usuario administrador
-INSERT INTO usuarios (name_user, email_user, pass_user, matricula_user, id_rol) 
-VALUES 
-('Administrador', 'admin@admin.com', 'admin123', 999999, 1);
+-- Nota: Para crear un administrador, usa el registro normal o OAuth
+-- y luego actualiza su rol con:
+-- UPDATE usuarios SET id_rol = 1 WHERE email_user = 'tu-email@gmail.com';
 
-ALTER TABLE usuarios ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
 
 Iniciar
 npm run dev

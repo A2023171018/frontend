@@ -1,25 +1,25 @@
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { register, signInWithGoogle } from "../../services/auth";
 import "./Login.css";
 
 function Registro() {
-  
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name_user: "",
     email_user: "",
     pass_user: "",
     confirmPassword: "",
-    matricula_user: ""
+    matricula_user: "",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
@@ -57,31 +57,28 @@ function Registro() {
     setLoading(true);
 
     try {
-      const response = await fetch("http://localhost:8000/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          name_user: formData.name_user,
-          email_user: formData.email_user,
-          pass_user: formData.pass_user,
-          matricula_user: parseInt(formData.matricula_user),
-          id_rol: 2
-        }),
+      await register({
+        name_user: formData.name_user,
+        email_user: formData.email_user,
+        pass_user: formData.pass_user,
+        matricula_user: parseInt(formData.matricula_user),
+        id_rol: 2,
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        alert("Registro exitoso. Ahora puedes iniciar sesión.");
-        navigate("/");
-      } else {
-        setError(data.detail || data.message || "Error al registrarse");
-      }
+      alert(
+        "Registro exitoso. Se ha enviado un correo de verificación a " +
+          formData.email_user +
+          ". Por favor, verifica tu correo antes de iniciar sesión.",
+      );
+      navigate("/");
     } catch (error) {
-      console.error("Error de conexión:", error);
-      setError("No se pudo conectar con el servidor. Verifica que el backend esté corriendo.");
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError(
+          "No se pudo conectar con el servidor. Verifica que el backend esté corriendo.",
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -92,6 +89,21 @@ function Registro() {
     navigate("/");
   };
 
+  const handleGoogleSignUp = async () => {
+    try {
+      setError("");
+      await signInWithGoogle();
+      // La redirección a Google se maneja automáticamente
+      // El callback regresará a /auth/callback
+    } catch (error) {
+      if (error instanceof Error) {
+        setError(error.message);
+      } else {
+        setError("Error al registrarse con Google");
+      }
+    }
+  };
+
   return (
     <div className="login-container">
       <div className="login-card" style={{ maxWidth: "420px" }}>
@@ -99,15 +111,17 @@ function Registro() {
 
         <form onSubmit={handleSubmit} className="login-form">
           {error && (
-            <div style={{
-              padding: "12px",
-              backgroundColor: "#fee2e2",
-              color: "#dc2626",
-              borderRadius: "8px",
-              fontSize: "14px",
-              marginBottom: "16px",
-              border: "1px solid #fecaca"
-            }}>
+            <div
+              style={{
+                padding: "12px",
+                backgroundColor: "#fee2e2",
+                color: "#dc2626",
+                borderRadius: "8px",
+                fontSize: "14px",
+                marginBottom: "16px",
+                border: "1px solid #fecaca",
+              }}
+            >
               {error}
             </div>
           )}
@@ -202,6 +216,75 @@ function Registro() {
           <button type="submit" className="login-button" disabled={loading}>
             {loading ? "Registrando..." : "Registrarse"}
           </button>
+
+          <div style={{ margin: "20px 0", textAlign: "center" }}>
+            <span
+              style={{
+                color: "#6b7280",
+                fontSize: "14px",
+                display: "block",
+                marginBottom: "12px",
+              }}
+            >
+              O regístrate con
+            </span>
+
+            <button
+              type="button"
+              onClick={handleGoogleSignUp}
+              disabled={loading}
+              style={{
+                width: "100%",
+                padding: "12px",
+                backgroundColor: "white",
+                border: "1px solid #d1d5db",
+                borderRadius: "8px",
+                fontSize: "14px",
+                fontWeight: "500",
+                cursor: loading ? "not-allowed" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "10px",
+                transition: "all 0.2s",
+              }}
+              onMouseOver={(e) => {
+                if (!loading) {
+                  e.currentTarget.style.backgroundColor = "#f9fafb";
+                  e.currentTarget.style.borderColor = "#9ca3af";
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = "white";
+                e.currentTarget.style.borderColor = "#d1d5db";
+              }}
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+                  fill="#4285F4"
+                />
+                <path
+                  d="M9.003 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332C2.44 15.983 5.485 18 9.003 18z"
+                  fill="#34A853"
+                />
+                <path
+                  d="M3.964 10.71c-.18-.54-.282-1.117-.282-1.71 0-.593.102-1.17.282-1.71V4.958H.957C.347 6.173 0 7.548 0 9s.348 2.827.957 4.042l3.007-2.332z"
+                  fill="#FBBC05"
+                />
+                <path
+                  d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0 5.485 0 2.44 2.017.96 4.958L3.967 7.29c.708-2.127 2.692-3.71 5.036-3.71z"
+                  fill="#EA4335"
+                />
+              </svg>
+              Continuar con Google
+            </button>
+          </div>
         </form>
 
         <p className="register-text">
