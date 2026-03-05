@@ -7,6 +7,14 @@ import {
   deleteEdificio,
 } from "../services/edificios";
 import { getDivisiones } from "../services/divisiones";
+import {
+  getAulasByEdificio,
+  createAula,
+  updateAula,
+  deleteAula,
+  toggleDisponibilidadAula,
+  type Aula,
+} from "../services/aulas";
 import "./Usuarios/Usuarios.css"; // reutiliza el mismo CSS
 
 interface Edificio {
@@ -58,6 +66,37 @@ function Edificios() {
   });
 
   const [modalError, setModalError] = useState("");
+
+  // Estados para modal de aulas
+  const [showAulasModal, setShowAulasModal] = useState(false);
+  const [selectedEdificio, setSelectedEdificio] = useState<Edificio | null>(
+    null,
+  );
+  const [aulasData, setAulasData] = useState<Aula[]>([]);
+  const [loadingAulas, setLoadingAulas] = useState(false);
+  const [showAddAulaModal, setShowAddAulaModal] = useState(false);
+  const [showEditAulaModal, setShowEditAulaModal] = useState(false);
+  const [aulaModalError, setAulaModalError] = useState("");
+
+  const [addAulaForm, setAddAulaForm] = useState({
+    nombre_aula: "",
+    codigo_aula: "",
+    planta: "baja",
+    capacidad: "0",
+    tipo_aula: "salon",
+    equipamiento: "{}",
+  });
+
+  const [editAulaForm, setEditAulaForm] = useState({
+    id_aula: 0,
+    nombre_aula: "",
+    codigo_aula: "",
+    planta: "baja",
+    capacidad: "0",
+    tipo_aula: "salon",
+    equipamiento: "{}",
+    disponible: true,
+  });
 
   const fetchEdificios = () => {
     getEdificios()
@@ -170,6 +209,155 @@ function Edificios() {
       fetchEdificios();
     } catch {
       alert("Error al eliminar el edificio");
+    }
+  };
+
+  // ============================================================
+  // FUNCIONES PARA GESTIÓN DE AULAS
+  // ============================================================
+
+  const openAulasModal = async (edificio: Edificio) => {
+    setSelectedEdificio(edificio);
+    setShowAulasModal(true);
+    setLoadingAulas(true);
+    try {
+      const aulas = await getAulasByEdificio(edificio.id_building);
+      setAulasData(aulas);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingAulas(false);
+    }
+  };
+
+  const refreshAulas = async () => {
+    if (!selectedEdificio) return;
+    setLoadingAulas(true);
+    try {
+      const aulas = await getAulasByEdificio(selectedEdificio.id_building);
+      setAulasData(aulas);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoadingAulas(false);
+    }
+  };
+
+  const openAddAulaModal = () => {
+    setAulaModalError("");
+    setAddAulaForm({
+      nombre_aula: "",
+      codigo_aula: "",
+      planta: "baja",
+      capacidad: "0",
+      tipo_aula: "salon",
+      equipamiento: "{}",
+    });
+    setShowAddAulaModal(true);
+  };
+
+  const handleAddAulaSubmit = async () => {
+    if (!selectedEdificio) return;
+    setAulaModalError("");
+    try {
+      let equipamiento = {};
+      try {
+        equipamiento = addAulaForm.equipamiento
+          ? JSON.parse(addAulaForm.equipamiento)
+          : {};
+      } catch {
+        setAulaModalError("Equipamiento debe ser un JSON válido");
+        return;
+      }
+
+      await createAula({
+        nombre_aula: addAulaForm.nombre_aula,
+        codigo_aula: addAulaForm.codigo_aula || undefined,
+        id_building: selectedEdificio.id_building,
+        planta: addAulaForm.planta || undefined,
+        capacidad: parseInt(addAulaForm.capacidad),
+        tipo_aula: addAulaForm.tipo_aula || undefined,
+        equipamiento,
+      });
+      setShowAddAulaModal(false);
+      refreshAulas();
+    } catch (error) {
+      if (error instanceof Error) {
+        setAulaModalError(error.message);
+      } else {
+        setAulaModalError("No se pudo crear el aula");
+      }
+    }
+  };
+
+  const openEditAulaModal = (aula: Aula) => {
+    setAulaModalError("");
+    setEditAulaForm({
+      id_aula: aula.id_aula,
+      nombre_aula: aula.nombre_aula,
+      codigo_aula: aula.codigo_aula || "",
+      planta: aula.planta || "baja",
+      capacidad: String(aula.capacidad),
+      tipo_aula: aula.tipo_aula || "salon",
+      equipamiento: JSON.stringify(aula.equipamiento || {}, null, 2),
+      disponible: aula.disponible,
+    });
+    setShowEditAulaModal(true);
+  };
+
+  const handleEditAulaSubmit = async () => {
+    setAulaModalError("");
+    try {
+      let equipamiento = {};
+      try {
+        equipamiento = editAulaForm.equipamiento
+          ? JSON.parse(editAulaForm.equipamiento)
+          : {};
+      } catch {
+        setAulaModalError("Equipamiento debe ser un JSON válido");
+        return;
+      }
+
+      await updateAula(editAulaForm.id_aula, {
+        nombre_aula: editAulaForm.nombre_aula,
+        codigo_aula: editAulaForm.codigo_aula || undefined,
+        planta: editAulaForm.planta || undefined,
+        capacidad: parseInt(editAulaForm.capacidad),
+        tipo_aula: editAulaForm.tipo_aula || undefined,
+        equipamiento,
+        disponible: editAulaForm.disponible,
+      });
+      setShowEditAulaModal(false);
+      refreshAulas();
+    } catch (error) {
+      if (error instanceof Error) {
+        setAulaModalError(error.message);
+      } else {
+        setAulaModalError("No se pudo actualizar el aula");
+      }
+    }
+  };
+
+  const handleDeleteAula = async (id_aula: number, nombre: string) => {
+    if (!window.confirm(`¿Eliminar el aula "${nombre}"?`)) return;
+    try {
+      await deleteAula(id_aula);
+      refreshAulas();
+    } catch (error) {
+      if (error instanceof Error) {
+        alert(error.message);
+      } else {
+        alert("Error al eliminar el aula");
+      }
+    }
+  };
+
+  const handleToggleDisponibilidad = async (id_aula: number) => {
+    try {
+      await toggleDisponibilidadAula(id_aula);
+      refreshAulas();
+    } catch {
+      alert("Error al cambiar disponibilidad");
     }
   };
 
@@ -404,19 +592,19 @@ function Edificios() {
             </div>
           </div>
 
-          <div className="table-container">
+          <div className="table-container" style={{ overflowX: "auto" }}>
             {loading ? (
               <p style={{ padding: "20px", textAlign: "center" }}>
                 Cargando edificios...
               </p>
             ) : (
-              <table className="data-table">
+              <table className="data-table" style={{ minWidth: "1200px" }}>
                 <thead>
                   <tr>
                     <th>Nombre</th>
                     <th>Código</th>
                     <th>Descripción</th>
-                    <th>División</th>
+                    {/* <th>División</th> */}
                     <th>Latitud</th>
                     <th>Longitud</th>
                     <th>Imagen</th>
@@ -429,7 +617,7 @@ function Edificios() {
                       <td className="cell-name">{ed.name_building}</td>
                       <td>{ed.code_building ?? "—"}</td>
                       <td>{ed.descrip_building ?? "—"}</td>
-                      <td>{ed.name_div ?? "—"}</td>
+                      {/* <td>{ed.name_div ?? "—"}</td> */}
                       <td>{ed.lat_building}</td>
                       <td>{ed.lon_building}</td>
                       <td>
@@ -453,6 +641,24 @@ function Edificios() {
                         )}
                       </td>
                       <td className="cell-actions">
+                        <button
+                          className="action-btn"
+                          title="Ver Aulas"
+                          style={{ color: "#0ea5e9" }}
+                          onClick={() => openAulasModal(ed)}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                          >
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                          </svg>
+                        </button>
                         <button
                           className="action-btn"
                           title="Editar"
@@ -719,6 +925,528 @@ function Edificios() {
               </button>
               <button className="btn-primary" onClick={handleEditSubmit}>
                 Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL GESTIÓN DE AULAS */}
+      {showAulasModal && selectedEdificio && (
+        <div style={modalStyle} onClick={() => setShowAulasModal(false)}>
+          <div
+            style={{
+              ...cardStyle,
+              maxWidth: "900px",
+              width: "90%",
+              maxHeight: "85vh",
+              overflow: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, fontSize: "18px" }}>
+                  Aulas de {selectedEdificio.name_building}
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0 0",
+                    fontSize: "13px",
+                    color: "#6b7280",
+                  }}
+                >
+                  Código: {selectedEdificio.code_building || "Sin código"}
+                </p>
+              </div>
+              <button
+                className="btn-primary"
+                onClick={openAddAulaModal}
+                style={{ whiteSpace: "nowrap" }}
+              >
+                + Añadir Aula
+              </button>
+            </div>
+
+            {loadingAulas ? (
+              <p
+                style={{
+                  textAlign: "center",
+                  padding: "40px",
+                  color: "#6b7280",
+                }}
+              >
+                Cargando aulas...
+              </p>
+            ) : aulasData.length === 0 ? (
+              <div
+                style={{
+                  textAlign: "center",
+                  padding: "40px",
+                  color: "#6b7280",
+                  backgroundColor: "#f9fafb",
+                  borderRadius: "8px",
+                }}
+              >
+                <svg
+                  width="48"
+                  height="48"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  style={{
+                    margin: "0 auto 12px",
+                    display: "block",
+                    opacity: 0.5,
+                  }}
+                >
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                <p style={{ margin: 0, fontSize: "14px" }}>
+                  No hay aulas registradas en este edificio
+                </p>
+                <p style={{ margin: "4px 0 0 0", fontSize: "13px" }}>
+                  Haz clic en "Añadir Aula" para crear una
+                </p>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Nombre</th>
+                      <th>Código</th>
+                      <th>Planta</th>
+                      <th>Capacidad</th>
+                      <th>Tipo</th>
+                      <th>Disponible</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {aulasData.map((aula) => (
+                      <tr key={aula.id_aula}>
+                        <td className="cell-name">{aula.nombre_aula}</td>
+                        <td>{aula.codigo_aula || "—"}</td>
+                        <td>
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              fontSize: "12px",
+                              fontWeight: 500,
+                              backgroundColor:
+                                aula.planta === "baja"
+                                  ? "#dbeafe"
+                                  : aula.planta === "alta"
+                                    ? "#ede9fe"
+                                    : aula.planta === "sotano"
+                                      ? "#f3f4f6"
+                                      : "#fef3c7",
+                              color:
+                                aula.planta === "baja"
+                                  ? "#1e40af"
+                                  : aula.planta === "alta"
+                                    ? "#6b21a8"
+                                    : aula.planta === "sotano"
+                                      ? "#374151"
+                                      : "#92400e",
+                            }}
+                          >
+                            {aula.planta || "—"}
+                          </span>
+                        </td>
+                        <td>
+                          <span
+                            style={{
+                              fontWeight: 600,
+                              color: aula.capacidad > 0 ? "#059669" : "#6b7280",
+                            }}
+                          >
+                            {aula.capacidad}
+                          </span>
+                          {aula.capacidad > 0 && (
+                            <span
+                              style={{
+                                fontSize: "11px",
+                                color: "#6b7280",
+                                marginLeft: "4px",
+                              }}
+                            >
+                              personas
+                            </span>
+                          )}
+                        </td>
+                        <td>{aula.tipo_aula || "—"}</td>
+                        <td>
+                          <button
+                            onClick={() =>
+                              handleToggleDisponibilidad(aula.id_aula)
+                            }
+                            style={{
+                              padding: "4px 10px",
+                              borderRadius: "6px",
+                              border: "none",
+                              fontSize: "12px",
+                              fontWeight: 500,
+                              cursor: "pointer",
+                              backgroundColor: aula.disponible
+                                ? "#d1fae5"
+                                : "#fee2e2",
+                              color: aula.disponible ? "#065f46" : "#991b1b",
+                            }}
+                          >
+                            {aula.disponible
+                              ? "✓ Disponible"
+                              : "✗ No disponible"}
+                          </button>
+                        </td>
+                        <td className="cell-actions">
+                          <button
+                            className="action-btn"
+                            title="Editar"
+                            onClick={() => openEditAulaModal(aula)}
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                          </button>
+                          <button
+                            className="action-btn"
+                            title="Eliminar"
+                            style={{ color: "#dc2626" }}
+                            onClick={() =>
+                              handleDeleteAula(aula.id_aula, aula.nombre_aula)
+                            }
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6" />
+                              <path d="M14 11v6" />
+                              <path d="M9 6V4h6v2" />
+                            </svg>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div
+              style={{
+                marginTop: "16px",
+                display: "flex",
+                justifyContent: "flex-end",
+              }}
+            >
+              <button
+                className="btn-filter"
+                onClick={() => setShowAulasModal(false)}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL AÑADIR AULA */}
+      {showAddAulaModal && (
+        <div style={modalStyle} onClick={() => setShowAddAulaModal(false)}>
+          <div style={cardStyle} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: 0, fontSize: "18px", marginBottom: "16px" }}>
+              Añadir Aula
+            </h3>
+
+            {aulaModalError && (
+              <div
+                style={{
+                  padding: "10px",
+                  backgroundColor: "#fee2e2",
+                  color: "#dc2626",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  marginBottom: "12px",
+                }}
+              >
+                {aulaModalError}
+              </div>
+            )}
+
+            <span style={labelStyle}>Nombre del Aula *</span>
+            <input
+              style={inputStyle}
+              placeholder="Ej: Aula 101, Laboratorio A"
+              value={addAulaForm.nombre_aula}
+              onChange={(e) =>
+                setAddAulaForm((p) => ({ ...p, nombre_aula: e.target.value }))
+              }
+            />
+
+            <span style={labelStyle}>Código</span>
+            <input
+              style={inputStyle}
+              placeholder="Ej: A-101"
+              value={addAulaForm.codigo_aula}
+              onChange={(e) =>
+                setAddAulaForm((p) => ({ ...p, codigo_aula: e.target.value }))
+              }
+            />
+
+            <span style={labelStyle}>Planta</span>
+            <select
+              style={selectStyle}
+              value={addAulaForm.planta}
+              onChange={(e) =>
+                setAddAulaForm((p) => ({ ...p, planta: e.target.value }))
+              }
+            >
+              <option value="baja">Planta Baja</option>
+              <option value="alta">Planta Alta</option>
+              <option value="sotano">Sótano</option>
+              <option value="azotea">Azotea</option>
+            </select>
+
+            <span style={labelStyle}>Capacidad (personas) *</span>
+            <input
+              style={inputStyle}
+              type="number"
+              min="0"
+              placeholder="30"
+              value={addAulaForm.capacidad}
+              onChange={(e) =>
+                setAddAulaForm((p) => ({ ...p, capacidad: e.target.value }))
+              }
+            />
+
+            <span style={labelStyle}>Tipo de Aula</span>
+            <select
+              style={selectStyle}
+              value={addAulaForm.tipo_aula}
+              onChange={(e) =>
+                setAddAulaForm((p) => ({ ...p, tipo_aula: e.target.value }))
+              }
+            >
+              <option value="salon">Salón</option>
+              <option value="laboratorio">Laboratorio</option>
+              <option value="auditorio">Auditorio</option>
+              <option value="sala_juntas">Sala de Juntas</option>
+              <option value="taller">Taller</option>
+            </select>
+
+            <span style={labelStyle}>Equipamiento (JSON)</span>
+            <textarea
+              style={{
+                ...inputStyle,
+                minHeight: "80px",
+                fontFamily: "monospace",
+                fontSize: "12px",
+              }}
+              placeholder='{"proyector": true, "aire_acondicionado": true}'
+              value={addAulaForm.equipamiento}
+              onChange={(e) =>
+                setAddAulaForm((p) => ({ ...p, equipamiento: e.target.value }))
+              }
+            />
+
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+                marginTop: "16px",
+              }}
+            >
+              <button
+                className="btn-filter"
+                onClick={() => setShowAddAulaModal(false)}
+              >
+                Cancelar
+              </button>
+              <button className="btn-primary" onClick={handleAddAulaSubmit}>
+                Crear Aula
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EDITAR AULA */}
+      {showEditAulaModal && (
+        <div style={modalStyle} onClick={() => setShowEditAulaModal(false)}>
+          <div style={cardStyle} onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ margin: 0, fontSize: "18px", marginBottom: "16px" }}>
+              Editar Aula
+            </h3>
+
+            {aulaModalError && (
+              <div
+                style={{
+                  padding: "10px",
+                  backgroundColor: "#fee2e2",
+                  color: "#dc2626",
+                  borderRadius: "8px",
+                  fontSize: "13px",
+                  marginBottom: "12px",
+                }}
+              >
+                {aulaModalError}
+              </div>
+            )}
+
+            <span style={labelStyle}>Nombre del Aula *</span>
+            <input
+              style={inputStyle}
+              placeholder="Ej: Aula 101, Laboratorio A"
+              value={editAulaForm.nombre_aula}
+              onChange={(e) =>
+                setEditAulaForm((p) => ({ ...p, nombre_aula: e.target.value }))
+              }
+            />
+
+            <span style={labelStyle}>Código</span>
+            <input
+              style={inputStyle}
+              placeholder="Ej: A-101"
+              value={editAulaForm.codigo_aula}
+              onChange={(e) =>
+                setEditAulaForm((p) => ({ ...p, codigo_aula: e.target.value }))
+              }
+            />
+
+            <span style={labelStyle}>Planta</span>
+            <select
+              style={selectStyle}
+              value={editAulaForm.planta}
+              onChange={(e) =>
+                setEditAulaForm((p) => ({ ...p, planta: e.target.value }))
+              }
+            >
+              <option value="baja">Planta Baja</option>
+              <option value="alta">Planta Alta</option>
+              <option value="sotano">Sótano</option>
+              <option value="azotea">Azotea</option>
+            </select>
+
+            <span style={labelStyle}>Capacidad (personas) *</span>
+            <input
+              style={inputStyle}
+              type="number"
+              min="0"
+              placeholder="30"
+              value={editAulaForm.capacidad}
+              onChange={(e) =>
+                setEditAulaForm((p) => ({ ...p, capacidad: e.target.value }))
+              }
+            />
+
+            <span style={labelStyle}>Tipo de Aula</span>
+            <select
+              style={selectStyle}
+              value={editAulaForm.tipo_aula}
+              onChange={(e) =>
+                setEditAulaForm((p) => ({ ...p, tipo_aula: e.target.value }))
+              }
+            >
+              <option value="salon">Salón</option>
+              <option value="laboratorio">Laboratorio</option>
+              <option value="auditorio">Auditorio</option>
+              <option value="sala_juntas">Sala de Juntas</option>
+              <option value="taller">Taller</option>
+            </select>
+
+            <span style={labelStyle}>Equipamiento (JSON)</span>
+            <textarea
+              style={{
+                ...inputStyle,
+                minHeight: "80px",
+                fontFamily: "monospace",
+                fontSize: "12px",
+              }}
+              placeholder='{"proyector": true, "aire_acondicionado": true}'
+              value={editAulaForm.equipamiento}
+              onChange={(e) =>
+                setEditAulaForm((p) => ({ ...p, equipamiento: e.target.value }))
+              }
+            />
+
+            <div
+              style={{
+                marginTop: "12px",
+                padding: "12px",
+                backgroundColor: "#f9fafb",
+                borderRadius: "6px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+              }}
+            >
+              <input
+                type="checkbox"
+                id="disponible"
+                checked={editAulaForm.disponible}
+                onChange={(e) =>
+                  setEditAulaForm((p) => ({
+                    ...p,
+                    disponible: e.target.checked,
+                  }))
+                }
+                style={{ width: "auto" }}
+              />
+              <label
+                htmlFor="disponible"
+                style={{ margin: 0, fontSize: "14px", color: "#374151" }}
+              >
+                Aula disponible para uso
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: "12px",
+                justifyContent: "flex-end",
+                marginTop: "16px",
+              }}
+            >
+              <button
+                className="btn-filter"
+                onClick={() => setShowEditAulaModal(false)}
+              >
+                Cancelar
+              </button>
+              <button className="btn-primary" onClick={handleEditAulaSubmit}>
+                Guardar Cambios
               </button>
             </div>
           </div>

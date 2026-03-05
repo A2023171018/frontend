@@ -12,7 +12,7 @@ import { register } from "../../services/auth";
 import "./Usuarios.css";
 
 interface Usuario {
-  id_user: number;
+  id_user: string;
   name_user: string;
   email_user: string;
   matricula_user: number | null;
@@ -69,8 +69,8 @@ function Usuarios() {
   });
 
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editForm, setEditForm] = useState<ModalData & { id_user: number }>({
-    id_user: 0,
+  const [editForm, setEditForm] = useState<ModalData & { id_user: string }>({
+    id_user: "",
     name_user: "",
     email_user: "",
     matricula_user: "",

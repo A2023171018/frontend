@@ -1,7 +1,7 @@
 import { apiFetch } from "./api";
 
 export interface Usuario {
-  id_user: number;
+  id_user: string;
   name_user: string;
   email_user: string;
   matricula_user: number | null;
@@ -41,14 +41,14 @@ export function createProfesor(data: UsuarioCreate) {
   });
 }
 
-export function updateUsuario(id: number, data: UsuarioUpdate) {
+export function updateUsuario(id: string, data: UsuarioUpdate) {
   return apiFetch(`/usuarios/${id}`, {
     method: "PUT",
     body: JSON.stringify(data),
   });
 }
 
-export function deleteUsuario(id: number) {
+export function deleteUsuario(id: string) {
   return apiFetch(`/usuarios/${id}`, {
     method: "DELETE",
   });

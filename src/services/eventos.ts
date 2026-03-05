@@ -7,7 +7,7 @@ export interface Evento {
   timedate_event: string;
   status_event: number;
   id_profe: number;
-  id_user: number;
+  id_user: string;
 }
 
 export interface EventoCreate {
@@ -15,7 +15,7 @@ export interface EventoCreate {
   id_building?: number;
   timedate_event?: string;
   id_profe?: number;
-  id_user?: number;
+  id_user?: string;
 }
 
 export interface EventoUpdate {
@@ -23,7 +23,7 @@ export interface EventoUpdate {
   id_building?: number;
   timedate_event?: string;
   id_profe?: number;
-  id_user?: number;
+  id_user?: string;
 }
 
 export interface Profesor {
@@ -31,7 +31,7 @@ export interface Profesor {
   nombre_profe: string;
 }
 
-export function getEventos(): Promise<Evento[]> {
+export function getEventos(): Promise<any[]> {
   return apiFetch("/eventos");
 }
 

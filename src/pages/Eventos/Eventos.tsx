@@ -15,11 +15,26 @@ import "./Eventos.css";
 interface Evento {
   id_event: number;
   name_event: string;
-  id_building: number;
   timedate_event: string;
   status_event: number;
   id_profe: number;
-  id_user: number;
+  id_user: string | null;
+  descrip_event: string | null;
+  img_event: string | null;
+  edificios: {
+    id_building: number;
+    name_building: string;
+    code_building: string;
+  } | null;
+  profesor: {
+    id_profe: number;
+    nombre_profe: string;
+  } | null;
+  usuarios: {
+    id_user: string;
+    name_user: string;
+    email_user: string;
+  } | null;
 }
 
 interface Edificio {
@@ -33,7 +48,7 @@ interface Profesor {
 }
 
 interface Usuario {
-  id_user: number;
+  id_user: string;
   name_user: string;
 }
 
@@ -116,16 +131,6 @@ function Eventos() {
     e.name_event.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const getNombreEdificio = (id: number) =>
-    edificios.find((e) => e.id_building === id)?.name_building ??
-    `Edificio ${id}`;
-
-  const getNombreProfesor = (id: number) =>
-    profesores.find((p) => p.id_profe === id)?.nombre_profe ?? `Profesor ${id}`;
-
-  const getNombreUsuario = (id: number) =>
-    usuarios.find((u) => u.id_user === id)?.name_user ?? `Usuario ${id}`;
-
   const handleAddSubmit = async () => {
     setModalError("");
     try {
@@ -134,7 +139,7 @@ function Eventos() {
         id_building: parseInt(addForm.id_building),
         timedate_event: addForm.timedate_event,
         id_profe: parseInt(addForm.id_profe),
-        id_user: parseInt(addForm.id_user),
+        id_user: addForm.id_user,
       });
       setShowAddModal(false);
       setAddForm({
@@ -159,10 +164,14 @@ function Eventos() {
     setEditForm({
       id_event: evento.id_event,
       name_event: evento.name_event,
-      id_building: String(evento.id_building),
+      id_building: evento.edificios?.id_building
+        ? String(evento.edificios.id_building)
+        : "",
       timedate_event: evento.timedate_event.replace(" ", "T").substring(0, 16),
-      id_profe: String(evento.id_profe),
-      id_user: String(evento.id_user),
+      id_profe: evento.profesor?.id_profe
+        ? String(evento.profesor.id_profe)
+        : "",
+      id_user: evento.usuarios?.id_user || "",
     });
     setShowEditModal(true);
   };
@@ -175,7 +184,7 @@ function Eventos() {
         id_building: parseInt(editForm.id_building),
         timedate_event: editForm.timedate_event,
         id_profe: parseInt(editForm.id_profe),
-        id_user: parseInt(editForm.id_user),
+        id_user: editForm.id_user,
       });
       setShowEditModal(false);
       fetchEventos();
@@ -451,10 +460,12 @@ function Eventos() {
                   {filteredEventos.map((evento) => (
                     <tr key={evento.id_event}>
                       <td className="cell-name">{evento.name_event}</td>
-                      <td>{getNombreEdificio(evento.id_building)}</td>
+                      <td>
+                        {evento.edificios?.name_building || "Sin edificio"}
+                      </td>
                       <td>{evento.timedate_event}</td>
-                      <td>{getNombreProfesor(evento.id_profe)}</td>
-                      <td>{getNombreUsuario(evento.id_user)}</td>
+                      <td>{evento.profesor?.nombre_profe || "Sin profesor"}</td>
+                      <td>{evento.usuarios?.name_user || "Sin usuario"}</td>
                       <td>
                         <span
                           className={`status-badge ${evento.status_event === 0 ? "status-inactive" : "status-active"}`}
